@@ -1,0 +1,137 @@
+groups:
+  - name: develop
+    jobs:
+      - test-pull-request
+  - name: publish
+    jobs:
+      - test-master
+      - shipit
+      - minor
+      - major
+      - patch
+
+resource_types:
+  - name: pull-request
+    type: docker-image
+    source:
+      repository: jtarchie/pr
+
+resources:
+  - name: master
+    type: git
+    source:
+      uri: {{github-repo-uri}}
+      branch: master
+      private_key: {{github-private-key}}
+
+  - name: pull-request
+    type: pull-request
+    source:
+      access_token: {{github-access-token}}
+      private_key: {{github-private-key}}
+      repo: {{github-repo-name}}
+      every: true
+
+  - name: version
+    type: semver
+    source:
+      driver: git
+      uri: {{github-repo-uri}}
+      branch: {{version-branch}}
+      private_key: {{github-private-key}}
+      file: version
+      initial_version: {{initial-version}}
+
+  - name: gh-release
+    type: github-release
+    source:
+      user: {{github-repo-username}}
+      repository: {{github-repo-reponame}}
+      access_token: {{github-access-token}}
+
+jobs:
+  # testing pull requests
+  - name: test-pull-request
+    plan:
+    - get: repo
+      resource: pull-request
+      version: every
+      trigger: true
+    - put: pull-request
+      params:
+        path: repo
+        status: pending
+    - task: test-pull-request
+      file: repo/ci/tasks/test-pr.yml
+      on_success:
+        put: pull-request
+        params:
+          path: repo
+          status: success
+      on_failure:
+        put: pull-request
+        params:
+          path: repo
+          status: failure
+
+# ship pipeline
+  - name: test-master
+    serial: true
+    plan:
+      - aggregate:
+        - get: repo
+          resource: master
+          trigger: true
+      - task: unit
+        file: repo/ci/tasks/unit.yml
+
+  - name: shipit
+    serial: true
+    serial_group: [ version ]
+    plan:
+      - aggregate:
+        - get: version
+        - get: repo
+          resource: master
+          passed: [ test-master ]
+          trigger: true
+      - task: shipit
+        file: repo/ci/tasks/shipit.yml
+        params:
+          ARTIFACT_GLOB: {{artifact-glob}}
+      - aggregate:
+        - put: gh-release
+          params:
+            name: release/name
+            tag: release/tag
+            body: release/notes.md
+            commitish: release/commitish
+            globs:
+            - {{artifact-glob}}
+        - put: version
+          params: { bump: patch }
+
+  ###
+  ### semver control
+  ###
+  - name: minor
+    serial: true
+    serial_group: [ version ]
+    plan:
+      - get: version
+      - put: version
+        param: { bump: minor }
+  - name: major
+    serial: true
+    serial_group: [ version ]
+    plan:
+      - get: version
+      - put: version
+        param: { bump: major }
+  - name: patch
+    serial: true
+    serial_group: [ version ]
+    plan:
+      - get: version
+      - put: version
+        param: { bump: patch }

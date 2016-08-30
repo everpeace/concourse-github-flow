@@ -1,0 +1,13 @@
+github-repo-uri: git@github.com:everpeace/concourse-github-flow.git
+github-repo-name: everpeace/cocnourse-github-flow
+github-repo-username: everpeace
+github-repo-reponame: concourse-github-flow
+
+github-access-token: xxx
+github-private-key: |
+  xxx
+
+version-branch: version
+initial-version: 0.0.1
+
+artifact-glob: "release/*.tgz"
