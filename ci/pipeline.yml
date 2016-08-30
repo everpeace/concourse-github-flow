@@ -75,17 +75,8 @@ jobs:
           path: repo
           status: failure
 
-# ship pipeline
-  - name: test-master
-    serial: true
-    plan:
-      - aggregate:
-        - get: repo
-          resource: master
-      - task: unit
-        file: repo/ci/tasks/unit.yml
-
-  - name: shipit
+# ship master branch
+  - name: ship-master
     serial: true
     serial_group: [ version ]
     plan:
@@ -93,8 +84,8 @@ jobs:
         - get: version
         - get: repo
           resource: master
-          passed: [ test-master ]
-          trigger: true
+      - task: unit
+        file: repo/ci/tasks/unit.yml
       - task: shipit
         file: repo/ci/tasks/shipit.yml
         params:
