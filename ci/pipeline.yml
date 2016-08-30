@@ -31,6 +31,7 @@ resources:
       private_key: {{github-private-key}}
       repo: {{github-repo-name}}
       every: true
+    check_every: 10s # only for demo
 
   - name: version
     type: semver
@@ -62,7 +63,7 @@ jobs:
         path: repo
         status: pending
     - task: test-pull-request
-      file: repo/ci/tasks/test-pr.yml
+      file: repo/ci/tasks/unit.yml
       on_success:
         put: pull-request
         params:
@@ -81,7 +82,6 @@ jobs:
       - aggregate:
         - get: repo
           resource: master
-          trigger: true
       - task: unit
         file: repo/ci/tasks/unit.yml
 
@@ -99,16 +99,16 @@ jobs:
         file: repo/ci/tasks/shipit.yml
         params:
           ARTIFACT_GLOB: {{artifact-glob}}
-      - aggregate:
-        - put: gh-release
-          params:
-            name: release/name
-            tag: release/tag
-            body: release/notes.md
-            commitish: release/commitish
-            globs:
-            - {{artifact-glob}}
-        - put: version
+      - put: gh-release
+        params:
+          name: release/name
+          tag: release/tag
+          body: release/notes.md
+          commitish: release/commitish
+          globs:
+          - {{artifact-glob}}
+        on_success:
+          put: version
           params: { bump: patch }
 
   ###
