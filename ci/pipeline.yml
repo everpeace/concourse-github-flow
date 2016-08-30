@@ -1,14 +1,14 @@
-groups:
-  - name: develop
-    jobs:
-      - test-pull-request
-  - name: publish
-    jobs:
-      - test-master
-      - shipit
-      - minor
-      - major
-      - patch
+# groups:
+#   - name: develop
+#     jobs:
+#       - test-pull-request
+#   - name: publish
+#     jobs:
+#       - test-master
+#       - shipit
+#       - minor
+#       - major
+#       - patch
 
 resource_types:
   - name: pull-request
